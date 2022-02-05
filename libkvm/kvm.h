@@ -59,8 +59,11 @@
 #define	_KVM_H_
 
 #include <nlist.h>
+
 #include <mach/vm_prot.h>
 #include <mach/vm_types.h>
+
+#include <sys/cdefs.h>
 #include <sys/types.h>
 
 /* Default version symbol. */
@@ -87,21 +90,30 @@ struct kvm_page {
     /* end of version 2 */
 };
 
+#define SWIF_DEV_PREFIX 0x0002
+#define LIBKVM_WALK_PAGES_VERSION   2
+
+#define DPCPU_SYMPREFIX     "pcpu_entry_"
+#define VNET_SYMPREFIX      "vnet_entry_"
+
+#define KLDSYM_LOOKUP   1
+
 __BEGIN_DECLS
 
 typedef struct __kvm kvm_t;
 
 struct kinfo_proc;
-int kvm_close(kvm_t *);
-char **kvm_getargv(kvm_t *, const struct kinfo_proc *, int);
-char **kvm_getenvv(kvm_t *, const struct kinfo_proc *, int);
-char *kvm_geterr(kvm_t *);
-int	kvm_getloadavg(kvm_t *, double [], int);
-char *kvm_getfiles(kvm_t *, int, int, int *);
+int     kvm_close(kvm_t *);
+char  **kvm_getargv(kvm_t *kd, const struct kinfo_proc *kp, int nchr);
+char  **kvm_getenvv(kvm_t *kd, const struct kinfo_proc *kp, int nchr);
+char   *kvm_geterr(kvm_t *);
+int     kvm_getloadavg(kvm_t *, double [], int);
+char   *kvm_getfiles(kvm_t *, int, int, int *);
 struct kinfo_proc *kvm_getprocs(kvm_t *, int, int, int *);
-int kvm_nlist(kvm_t *kd, struct nlist *nl);
-kvm_t *kvm_openfiles(const char *uf, const char *mf, const char *sf __unused, int flag, char *errout);
-kvm_t *kvm_open(const char *uf, const char *mf, const char *sf __unused, int flag, const char *errstr);
+int     kvm_nlist(kvm_t *kd, struct nlist *nl);
+kvm_t  *kvm_openfiles(const char *uf, const char *mf, const char *sf __unused, int flag, char *errout);
+kvm_t  *kvm_open(const char *uf, const char *mf, const char *sf __unused, int flag, const char *errstr);
+kvm_t  *kvm_open2(const char *uf, const char *mf, int flag, char *errout, int (*resolver)(const char *, kvaddr_t *));
 ssize_t kvm_read(kvm_t *kd, u_long kva, void *buf, size_t len);
 ssize_t kvm_read2(kvm_t *kd, kvaddr_t kva, void *buf, size_t len);
 ssize_t kvm_write(kvm_t *kd, u_long kva, const void *buf, size_t len);

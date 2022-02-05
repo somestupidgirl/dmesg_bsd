@@ -102,89 +102,6 @@ kvm_geterr(kvm_t *kd)
 	return (kd->errbuf);
 }
 
-#if __STDC__
-#include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
-
-/*
- * Report an error using printf style arguments.  "program" is kd->program
- * on hard errors, and 0 on soft errors, so that under sun error emulation,
- * only hard errors are printed out (otherwise, programs like gdb will
- * generate tons of error messages when trying to access bogus pointers).
- */
-void
-#if __STDC__
-_kvm_err(kvm_t *kd, const char *program, const char *fmt, ...)
-#else
-_kvm_err(kd, program, fmt, va_alist)
-	kvm_t *kd;
-	char *program, *fmt;
-	va_dcl
-#endif
-{
-	va_list ap;
-
-#ifdef __STDC__
-	va_start(ap, fmt);
-#else
-	va_start(ap);
-#endif
-	if (program != NULL) {
-		(void)fprintf(stderr, "%s: ", program);
-		(void)vfprintf(stderr, fmt, ap);
-		(void)fputc('\n', stderr);
-	} else
-		(void)vsnprintf(kd->errbuf,
-		    sizeof(kd->errbuf), (char *)fmt, ap);
-
-	va_end(ap);
-}
-
-void
-#if __STDC__
-_kvm_syserr(kvm_t *kd, const char *program, const char *fmt, ...)
-#else
-_kvm_syserr(kd, program, fmt, va_alist)
-	kvm_t *kd;
-	char *program, *fmt;
-	va_dcl
-#endif
-{
-	va_list ap;
-	int n;
-
-#if __STDC__
-	va_start(ap, fmt);
-#else
-	va_start(ap);
-#endif
-	if (program != NULL) {
-		(void)fprintf(stderr, "%s: ", program);
-		(void)vfprintf(stderr, fmt, ap);
-		(void)fprintf(stderr, ": %s\n", strerror(errno));
-	} else {
-		char *cp = kd->errbuf;
-
-		(void)vsnprintf(cp, sizeof(kd->errbuf), (char *)fmt, ap);
-		n = strlen(cp);
-		(void)snprintf(&cp[n], sizeof(kd->errbuf) - n, ": %s",
-		    strerror(errno));
-	}
-	va_end(ap);
-}
-
-void *
-_kvm_malloc(kvm_t *kd, size_t n)
-{
-	void *p;
-
-	if ((p = malloc(n)) == NULL)
-		_kvm_err(kd, kd->program, strerror(errno));
-	return (p);
-}
-
 static kvm_t *
 _kvm_open(kvm_t *kd, const char *uf, const char *mf, const char *sf, int flag, char *errout)
 {
@@ -283,7 +200,7 @@ kvm_openfiles(const char *uf, const char *mf, const char *sf __unused, int flag,
 			    _POSIX2_LINE_MAX);
 		return (NULL);
 	}
-	return (_kvm_open(kd, uf, mf, flag, errout, NULL));
+	return (_kvm_open(kd, uf, mf, NULL, flag, errout));
 }
 
 kvm_t *
@@ -298,7 +215,7 @@ kvm_open(const char *uf, const char *mf, const char *sf __unused, int flag, cons
 		return (NULL);
 	}
 	kd->program = errstr;
-	return (_kvm_open(kd, uf, mf, flag, NULL, NULL));
+	return (_kvm_open(kd, uf, mf, NULL, flag, errstr));
 }
 
 int

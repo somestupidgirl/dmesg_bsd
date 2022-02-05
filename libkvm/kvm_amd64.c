@@ -51,6 +51,8 @@ __SCCSID("@(#)kvm_hp300.c	8.1 (Berkeley) 6/4/93");
 #include <string.h>
 #include <unistd.h>
 
+#include <mach/i386/vm_param.h>
+#include <mach-o/loader.h>
 #include <machine/endian.h>
 
 #include <sys/param.h>
@@ -61,8 +63,8 @@ __SCCSID("@(#)kvm_hp300.c	8.1 (Berkeley) 6/4/93");
 #include "endian.h"
 
 struct vmstate {
-	size_t		phnum;
-//	GElf_Phdr	*phdr;
+	size_t			 phnum;
+	macho_shdr_t	*shdr;
 	amd64_pml4e_t	*PML4;
 };
 
@@ -73,22 +75,22 @@ static size_t
 _kvm_pa2off(kvm_t *kd, uint64_t pa, off_t *ofs)
 {
 	struct vmstate *vm = kd->vmst;
-	//GElf_Phdr *p;
+	macho_shdr_t *p;
 	size_t n;
 
 	if (kd->rawdump) {
 		*ofs = pa;
 		return (AMD64_PAGE_SIZE - (pa & AMD64_PAGE_MASK));
 	}
-#if 0
-	p = vm->phdr;
+
+	p = vm->shdr;
 	n = vm->phnum;
-	while (n && (pa < p->p_paddr || pa >= p->p_paddr + p->p_memsz))
+	while (n && (pa < p->vmaddr || pa >= p->vmaddr + p->vmsize))
 		p++, n--;
 	if (n == 0)
 		return (0);
-	*ofs = (pa - p->p_paddr) + p->p_offset;
-#endif
+	*ofs = (pa - p->vmaddr) + p->fileoff;
+
 	return (AMD64_PAGE_SIZE - (pa & AMD64_PAGE_MASK));
 }
 
@@ -99,7 +101,7 @@ _amd64_freevtop(kvm_t *kd)
 
 	if (vm->PML4)
 		free(vm->PML4);
-	//free(vm->phdr);
+	free(vm->shdr);
 	free(vm);
 	kd->vmst = NULL;
 }
